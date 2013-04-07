@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+	<meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+	<meta charset="utf-8">
+
+	<title>ATGT</title>
+	<meta content="width=device-width, initial-scale=1.0" name="viewport">
+	<meta content="" name="description">
+	<meta content="" name="author"><!-- Le styles -->
+	<link href="{{ url_for('static', filename='css/bootstrap.css') }}" rel="stylesheet">
+	<style type="text/css">
+
+		body {        padding-top: 60px;        padding-bottom: 40px;      }      
+		.sidebar-nav {        padding: 9px 0;      }  
+	</style>
+	<link href="{{ url_for('static', filename='css/bootstrap-responsive.css') }}" rel="stylesheet">
+	<!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+	<!--[if lt IE 9]>
+	  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+	<!-- Le fav and touch icons -->
+	<link href="ico/favicon.ico" rel="shortcut icon">
+	<link href="ico/apple-touch-icon-144-precomposed.png" rel="apple-touch-icon-precomposed" sizes="144x144">
+	<link href="ico/apple-touch-icon-114-precomposed.png" rel="apple-touch-icon-precomposed" sizes="114x114">
+	<link href="ico/apple-touch-icon-72-precomposed.png" rel="apple-touch-icon-precomposed" sizes="72x72">
+	<link href="ico/apple-touch-icon-57-precomposed.png" rel="apple-touch-icon-precomposed">
+	
+	<script src="http://code.jquery.com/jquery-latest.js"></script>
+	<script src="{{ url_for('static', filename='js/json2.js') }}"></script>
+	<script type="text/javascript">		
+		var current_id = -1;
+		var timer;
+		//wait for the entire document to load before loading jquery elements
+		$(document).ready(function(){
+			//upon submitting a list
+			$("#submitlist").click(function() {
+				$(this).attr("disabled","disabled");
+				var textarea = document.getElementById('artists');
+				
+				// http://stackoverflow.com/questions/3800795/parse-a-textarea-in-substrings-based-on-line-breaks-in-javascript
+				var lines = textarea.value.replace(/\r\n/g, "\n").split("\n");
+			
+				// https://raw.github.com/douglascrockford/JSON-js/master/json2.js
+				var jsonstring = JSON.stringify(lines);
+				
+				$.post("{{url_for('getartists')}}", jsonstring,
+					function(artistsongs){
+						artistsonglist = jQuery.parseJSON(artistsongs);
+						var items = [];
+						for (var i = 0; i < artistsonglist.length; i++) {
+							var artistsong = artistsonglist[i];							
+							//$('<p>' + artistsong + '</p>').appendTo('#playarea');
+							artist = artistsong[0];
+							song = artistsong[1];
+							length = artistsong[2];
+							id = i+'';
+
+							items.push('<li id=' + id + ' artist="'+ artist + '" song="' + song + '" length="' + length + '"><a>' + artist + ' - ' + song + '</a></li>')					
+						}
+						$(items.join('')).appendTo('#playlist');						
+						$('#0').trigger('click');
+						$("#submitlist").removeAttr("disabled");
+					});
+			});
+			
+			//upon clicking an item in the playlist
+			$("#playlist li").live("click", function(){
+				//clear the old timer
+				//http://stackoverflow.com/questions/5824263/interrupt-and-restart-a-settimeout-sequence-of-events-with-jquery
+				clearInterval(timer);
+				
+				//reset the active
+				$("#playlist li").removeClass("active");
+				$(this).addClass("active");
+				
+				//remove the widget
+				$('#tomahk').remove();
+				
+				//http://stackoverflow.com/questions/551538/jquery-value-of-element
+				artist = $(this).attr('artist');
+				song = $(this).attr('song');
+				length = parseInt($(this).attr('length'));
+				id = $(this).attr('id');
+				current_id = parseInt(id);
+				widget = '<iframe id="tomahk" src="http://toma.hk/embed.php?artist=' + artist + '&title=' + song + '&autoplay=true" width="300" scrolling="no" height="300" frameborder="0" allowtransparency="true" ></iframe>';
+				$('#playarea').append(widget);
+							
+				//set the timeout function (it will trigger after the length + 5 seconds)
+				timer = setTimeout(function(){
+					var nextsong = current_id + 1;
+					var songid = '#' + nextsong.toString();
+					$(songid).trigger('click');
+				}, length + 5000);
+			});		
+		});
+	</script>
+</head>
+
+<body class="" >
+	<div class="row">
+		<div class="container-fluid">
+			<div id="leftpane" class="span3">
+			
+			</div><!--leftpane-->
+			
+			<div id="centerpane" class="span6">
+				<div id="info">
+					<p>Paste requested artists here and we'll give you a playlist of their best songs</p>
+				</div>
+				<br>
+				<textarea id="artists" class="span6" rows="3"></textarea>
+				<span id="submitlist" class="btn btn-primary" type="submit">Submit list</span>
+				<br>
+				<div class="span6 pull-left">
+					<ul id="playlist" class="nav nav-pills nav-stacked unstyled">
+					</ul>
+				</div>
+				<br>
+				<div id="playarea">
+					
+				</div>
+			</div><!--centerpane -->
+			
+			<div id="rightpane" class="span3">
+			
+			</div><!--rightpane-->
+			
+			<!-- Le javascript
+			================================================== -->
+			<!-- Placed at the end of the document so the pages load faster -->
+			<script src="{{url_for('static',filename='js/bootstrap.min.js')}}"></script>
+		</div>
+	</div>
+</body>
+</html>
